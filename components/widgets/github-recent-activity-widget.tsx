@@ -22,25 +22,24 @@ export function GitHubRecentActivityWidget({
         <ul className="space-y-2">
           {events.slice(0, 5).map((event, index) => {
             const item = event as Record<string, unknown>;
-            const repo =
-              typeof item.repo === "string" ? item.repo : "Unknown repository";
+            const repo = typeof item.repo === "string" ? item.repo : "Unknown repository";
             const createdAt =
               typeof item.createdAt === "string"
                 ? item.createdAt
                 : typeof item.created_at === "string"
-                  ? item.created_at
-                  : "unknown";
+                    ? item.created_at
+                    : "unknown";
             const summary =
               typeof item.summary === "string"
                 ? item.summary
                 : typeof item.type === "string"
-                  ? item.type
-                  : "Activity";
+                    ? item.type
+                    : "Activity";
             return (
-            <li key={`${repo}-${createdAt}-${index}`} className="rounded border p-2">
-              <p className="text-sm font-medium">{summary}</p>
-              <p className="text-xs text-muted-foreground">{repo}</p>
-            </li>
+              <li key={`${repo}-${createdAt}-${index}`} className="rounded border p-2">
+                <p className="text-sm font-medium">{summary}</p>
+                <p className="text-xs text-muted-foreground">{repo}</p>
+              </li>
             );
           })}
         </ul>

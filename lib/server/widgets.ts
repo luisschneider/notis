@@ -35,6 +35,30 @@ export async function listWidgetInstancesByUserId(userId: string): Promise<Widge
   })) as WidgetInstanceRow[];
 }
 
+export async function listWidgetInstancesByType(
+  userId: string,
+  widgetType: WidgetType,
+): Promise<WidgetInstanceRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("widget_instances")
+    .select(
+      "id, user_id, widget_type, position, config, data, is_visible, last_synced_at, created_at, updated_at",
+    )
+    .eq("user_id", userId)
+    .eq("widget_type", widgetType)
+    .order("position", { ascending: true });
+
+  if (error) {
+    throw new Error(`Failed to list widgets by type: ${error.message}`);
+  }
+
+  return (data ?? []).map((widget) => ({
+    ...widget,
+    widget_type: toWidgetType(widget.widget_type),
+  })) as WidgetInstanceRow[];
+}
+
 async function getNextPosition(userId: string): Promise<number> {
   const supabase = await createClient();
   const { data, error } = await supabase

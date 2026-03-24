@@ -47,6 +47,7 @@ export interface ConnectedAccountRow {
   refresh_token: string | null;
   expires_at: string | null;
   provider_user_id: string;
+  needs_reauth: boolean;
   created_at: string;
 }
 

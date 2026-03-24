@@ -22,7 +22,7 @@ interface SubstackLatestPostsWidgetProps {
 export function SubstackLatestPostsWidget({
   widget,
 }: SubstackLatestPostsWidgetProps): React.JSX.Element {
-  const posts = Array.isArray(widget.data.items) ? widget.data.items : [];
+  const posts = Array.isArray(widget.data.posts) ? widget.data.posts : [];
   const publication =
     typeof widget.config.publication === "string"
       ? widget.config.publication
@@ -39,24 +39,37 @@ export function SubstackLatestPostsWidget({
             No Substack posts synced yet.
           </li>
         ) : null}
-        {posts.slice(0, 3).map((post, index) => (
+        {posts.slice(0, 3).map((post, index) => {
+          const item = post as Record<string, unknown>;
+          const url =
+            typeof item.url === "string" && item.url.trim()
+              ? item.url
+              : "#";
+          const title =
+            typeof item.title === "string" && item.title.trim()
+              ? item.title
+              : "Untitled post";
+          const publishedAt =
+            typeof item.publishedAt === "string" ? item.publishedAt : null;
+          return (
           <li
             className="rounded-md border border-border/70 bg-background/80 p-3"
-            key={`${post.url}-${index}`}
+            key={`${url}-${index}`}
           >
             <a
               className="line-clamp-2 text-sm font-medium hover:underline"
-              href={post.url}
+              href={url}
               rel="noreferrer"
               target="_blank"
             >
-              {post.title}
+              {title}
             </a>
             <p className="mt-1 text-xs text-muted-foreground">
-              {toRelativeTime(post.publishedAt)}
+              {toRelativeTime(publishedAt)}
             </p>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </WidgetFrame>
   );

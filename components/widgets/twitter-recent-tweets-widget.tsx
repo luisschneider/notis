@@ -8,9 +8,11 @@ interface TwitterRecentTweetsWidgetProps {
 export function TwitterRecentTweetsWidget({
   widget,
 }: TwitterRecentTweetsWidgetProps): React.JSX.Element {
-  const tweetUrls = Array.isArray(widget.data.tweetUrls)
-    ? widget.data.tweetUrls
-    : [];
+  const tweetUrls = Array.isArray(widget.data.tweets)
+    ? widget.data.tweets
+    : Array.isArray(widget.data.tweetUrls)
+      ? widget.data.tweetUrls
+      : [];
 
   return (
     <WidgetFrame title="Recent Tweets">
@@ -20,18 +22,36 @@ export function TwitterRecentTweetsWidget({
         </p>
       ) : (
         <ul className="space-y-2">
-          {tweetUrls.slice(0, 5).map((url) => (
-            <li key={url} className="rounded-md border p-2 text-sm">
+          {tweetUrls.slice(0, 5).map((tweet, index) => {
+            const tweetRecord = tweet as Record<string, unknown>;
+            const url =
+              typeof tweetRecord.url === "string"
+                ? tweetRecord.url
+                : typeof tweet === "string"
+                  ? tweet
+                  : "";
+            const text =
+              typeof tweetRecord.text === "string"
+                ? tweetRecord.text
+                : url;
+            const author =
+              typeof tweetRecord.authorHandle === "string"
+                ? tweetRecord.authorHandle
+                : "";
+            return (
+            <li key={`${url}-${index}`} className="rounded-md border p-2 text-sm">
+              {author ? <p className="mb-1 text-xs text-muted-foreground">@{author}</p> : null}
               <a
                 href={url}
                 target="_blank"
                 rel="noreferrer"
                 className="line-clamp-2 break-all hover:underline"
               >
-                {url}
+                {text}
               </a>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </WidgetFrame>
