@@ -1,8 +1,6 @@
 import { parseISO } from "date-fns";
 import { listWidgetInstancesByUserId, updateWidgetInstanceById } from "@/lib/server/widgets";
 import { isWidgetType } from "@/lib/widgets/types";
-import { updateWidgetInstanceById, listWidgetInstancesByType } from "@/lib/server/widgets";
-import type { WidgetType } from "@/lib/widgets/types";
 
 export interface GithubActivityItem {
   type: string;
@@ -264,95 +262,4 @@ export async function syncGitHubWidgetsForUser(userId: string): Promise<number> 
   }
 
   return updatedCount;
-}
-
-function getStringConfigValue(
-  config: Record<string, unknown>,
-  key: string,
-): string {
-  return typeof config[key] === "string" ? config[key] : "";
-}
-
-function getNumberConfigValue(
-  config: Record<string, unknown>,
-  key: string,
-  fallback: number,
-): number {
-  return typeof config[key] === "number" ? config[key] : fallback;
-}
-
-type GitHubSyncWidgetType =
-  | "github_recent_activity"
-  | "github_pinned_repos"
-  | "github_contribution_graph";
-
-async function syncWidgetForType(
-  userId: string,
-  widgetType: GitHubSyncWidgetType,
-): Promise<number> {
-  const widgets = await listWidgetInstancesByType(userId, widgetType as WidgetType);
-  let updatedCount = 0;
-
-  for (const widget of widgets) {
-    const username = getStringConfigValue(widget.config, "username").trim();
-    if (!username) {
-      continue;
-    }
-
-    if (widgetType === "github_recent_activity") {
-      const maxItems = Math.max(1, Math.min(10, getNumberConfigValue(widget.config, "maxItems", 5)));
-      const items = await fetchGithubRecentActivity(username, maxItems);
-      await updateWidgetInstanceById(userId, widget.id, {
-        data: {
-          ...widget.data,
-          items,
-          events: items,
-        },
-      });
-      updatedCount += 1;
-      continue;
-    }
-
-    if (widgetType === "github_pinned_repos") {
-      const maxItems = Math.max(1, Math.min(10, getNumberConfigValue(widget.config, "maxItems", 4)));
-      const items = await fetchGithubPinnedRepos(username, maxItems);
-      await updateWidgetInstanceById(userId, widget.id, {
-        data: {
-          ...widget.data,
-          items,
-          repos: items,
-        },
-      });
-      updatedCount += 1;
-      continue;
-    }
-
-    const weeks = await fetchGithubContributionGraph(username);
-    const days = weeks.flatMap((week) => week.days);
-    await updateWidgetInstanceById(userId, widget.id, {
-      data: {
-        ...widget.data,
-        weeks,
-        days,
-      },
-    });
-    updatedCount += 1;
-  }
-
-  return updatedCount;
-}
-
-export async function syncGitHubWidgetsForUser(userId: string): Promise<number> {
-  const targets: GitHubSyncWidgetType[] = [
-    "github_recent_activity",
-    "github_pinned_repos",
-    "github_contribution_graph",
-  ];
-
-  let total = 0;
-  for (const target of targets) {
-    total += await syncWidgetForType(userId, target);
-  }
-
-  return total;
 }

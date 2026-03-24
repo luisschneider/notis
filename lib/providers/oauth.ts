@@ -133,3 +133,14 @@ export async function deleteConnectedAccountByProvider(
 export async function decryptProviderToken(encryptedToken: string): Promise<string> {
   return decryptToken(encryptedToken);
 }
+
+interface OAuthStateInput {
+  userId: string;
+  provider: ConnectedAccountRow["provider"];
+  nextPath: string;
+}
+
+export function createOAuthState(input: OAuthStateInput): string {
+  const raw = `${input.userId}:${input.provider}:${input.nextPath}:${Date.now()}`;
+  return Buffer.from(raw, "utf8").toString("base64url");
+}

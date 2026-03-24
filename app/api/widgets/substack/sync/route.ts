@@ -1,8 +1,6 @@
-import { z } from "zod";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { syncSubstackWidget } from "@/lib/providers/substack";
-import { getWidgetInstanceById } from "@/lib/server/widgets";
+import { syncSubstackWidgetsForUser } from "@/lib/providers/substack";
 
 interface SyncResponse {
   updated?: number;
@@ -18,14 +16,9 @@ interface SyncResponse {
     created_at: string;
     updated_at: string;
   };
+  synced?: number;
   error?: string;
 }
-
-const bodySchema = z
-  .object({
-    widgetId: z.string().uuid().optional(),
-  })
-  .strict();
 
 export async function POST(request: Request): Promise<NextResponse<SyncResponse>> {
   const supabase = await createClient();
@@ -38,31 +31,22 @@ export async function POST(request: Request): Promise<NextResponse<SyncResponse>
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  let payload: z.infer<typeof bodySchema>;
   try {
-    payload = bodySchema.parse((await request.json()) as unknown);
-  } catch {
-    return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
-  }
-
-  if (!payload.widgetId) {
+    const raw = (await request.json()) as { widgetId?: string };
+    const widgetId =
+      typeof raw.widgetId === "string" && raw.widgetId.length > 0 ? raw.widgetId : undefined;
+    const synced = await syncSubstackWidgetsForUser(user.id, widgetId);
     return NextResponse.json(
-      { error: "widgetId is required for Substack sync." },
-      { status: 400 },
+      {
+        updated: synced.updated,
+        widget: synced.widget ?? undefined,
+        synced: synced.updated,
+      },
+      { status: 200 },
     );
-  }
-
-  const widget = await getWidgetInstanceById(user.id, payload.widgetId);
-  if (!widget) {
-    return NextResponse.json({ error: "Widget not found." }, { status: 404 });
-  }
-
-  try {
-    const updatedWidget = await syncSubstackWidget(user.id, widget);
-    return NextResponse.json({ updated: 1, widget: updatedWidget }, { status: 200 });
   } catch (error: unknown) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to sync Substack widget." },
+      { error: error instanceof Error ? error.message : "Failed to sync Substack widgets." },
       { status: 400 },
     );
   }

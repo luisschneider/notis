@@ -1,8 +1,6 @@
 import Parser from "rss-parser";
 import type { WidgetInstanceRow } from "@/lib/supabase/types";
 import { listWidgetInstancesByUserId, updateWidgetInstanceById } from "@/lib/server/widgets";
-import { listWidgetInstancesByUserId, updateWidgetInstanceById } from "@/lib/server/widgets";
-import type { WidgetInstanceRow } from "@/lib/supabase/types";
 
 export interface SubstackPost {
   title: string;
@@ -67,6 +65,22 @@ async function syncSubstackWidget(widget: WidgetInstanceRow): Promise<WidgetInst
   });
 }
 
+export async function syncSubstackWidgetById(
+  userId: string,
+  widget: WidgetInstanceRow,
+): Promise<WidgetInstanceRow> {
+  if (widget.user_id !== userId) {
+    throw new Error("Widget does not belong to current user.");
+  }
+  if (
+    widget.widget_type !== "substack_latest_posts" &&
+    widget.widget_type !== "substack_featured_post"
+  ) {
+    throw new Error("Widget is not a Substack widget.");
+  }
+  return syncSubstackWidget(widget);
+}
+
 export async function syncSubstackWidgetsForUser(
   userId: string,
   widgetId?: string,
@@ -88,57 +102,4 @@ export async function syncSubstackWidgetsForUser(
     updated: targetWidgets.length,
     widget: lastUpdatedWidget,
   };
-}
-
-function readPublication(widget: WidgetInstanceRow): string {
-  const publication = widget.config.publication;
-  if (typeof publication !== "string") {
-    return "";
-  }
-  return publication.trim();
-}
-
-function readMaxItems(widget: WidgetInstanceRow): number {
-  const maxItems = widget.config.maxItems;
-  if (typeof maxItems !== "number") {
-    return 3;
-  }
-  return Math.max(1, Math.min(10, Math.floor(maxItems)));
-}
-
-export async function syncSubstackWidgetsForUser(userId: string): Promise<number> {
-  const widgets = await listWidgetInstancesByUserId(userId);
-  const substackWidgets = widgets.filter(
-    (widget) =>
-      widget.widget_type === "substack_latest_posts" ||
-      widget.widget_type === "substack_featured_post",
-  );
-
-  let updatedCount = 0;
-  for (const widget of substackWidgets) {
-    const publication = readPublication(widget);
-    if (!publication) {
-      continue;
-    }
-
-    const posts = await fetchSubstackPosts(publication, readMaxItems(widget));
-    if (widget.widget_type === "substack_featured_post") {
-      await updateWidgetInstanceById(userId, widget.id, {
-        data: {
-          post: posts[0] ?? null,
-        },
-      });
-      updatedCount += 1;
-      continue;
-    }
-
-    await updateWidgetInstanceById(userId, widget.id, {
-      data: {
-        items: posts,
-      },
-    });
-    updatedCount += 1;
-  }
-
-  return updatedCount;
 }

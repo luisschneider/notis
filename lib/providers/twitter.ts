@@ -65,7 +65,7 @@ function parseWidgetRows(
   return rows as WidgetInstanceRow[];
 }
 
-export async function syncTwitterWidgets(
+export async function syncTwitterWidgetsForUser(
   userId: string,
   widgetInstanceId?: string,
 ): Promise<number> {
