@@ -5,8 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getWidgetInstanceById } from "@/lib/server/widgets";
 import { WIDGET_REGISTRY_MAP } from "@/lib/widgets/registry";
 import { isWidgetType } from "@/lib/widgets/types";
+import { WidgetSettingsPageClient } from "@/components/widgets/settings/widget-settings-page-client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface WidgetSettingsPageProps {
   params: Promise<{ id: string }>;
@@ -49,22 +50,8 @@ export default async function WidgetSettingsPage({
       </Button>
 
       <Card>
-        <CardHeader>
-          <CardTitle>{registry.displayName} settings</CardTitle>
-          <CardDescription>
-            Configuration UI for this widget will be expanded in provider phases.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <p>Widget type: {widget.widget_type}</p>
-          <p>Provider: {registry.provider}</p>
-          <p>
-            Grid size: {registry.gridWidth}×{registry.gridHeight}
-          </p>
-          <p>
-            This placeholder page confirms routing and instance-level settings access required for
-            Phase 2.
-          </p>
+        <CardContent className="pt-6">
+          <WidgetSettingsPageClient initialWidget={widget} />
         </CardContent>
       </Card>
     </section>

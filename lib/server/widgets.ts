@@ -197,3 +197,46 @@ export async function getWidgetInstanceById(
     widget_type: toWidgetType(data.widget_type),
   };
 }
+
+interface UpdateWidgetInstanceInput {
+  config?: Record<string, unknown>;
+  data?: Record<string, unknown>;
+}
+
+export async function updateWidgetInstanceById(
+  userId: string,
+  widgetId: string,
+  input: UpdateWidgetInstanceInput,
+): Promise<WidgetInstanceRow> {
+  const supabase = await createClient();
+  const payload: {
+    config?: Record<string, unknown>;
+    data?: Record<string, unknown>;
+  } = {};
+
+  if (input.config) {
+    payload.config = input.config;
+  }
+  if (input.data) {
+    payload.data = input.data;
+  }
+
+  const { data, error } = await supabase
+    .from("widget_instances")
+    .update(payload)
+    .eq("id", widgetId)
+    .eq("user_id", userId)
+    .select(
+      "id, user_id, widget_type, position, config, data, is_visible, last_synced_at, created_at, updated_at",
+    )
+    .single();
+
+  if (error || !data) {
+    throw new Error(`Failed to update widget: ${error?.message ?? "Unknown error"}`);
+  }
+
+  return {
+    ...(data as WidgetInstanceRow),
+    widget_type: toWidgetType(data.widget_type),
+  };
+}

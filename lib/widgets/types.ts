@@ -50,6 +50,18 @@ export interface WidgetDefaults {
   data: WidgetJsonObject;
 }
 
+export interface ReadingListItemType {
+  id: string;
+  user_id: string;
+  widget_instance_id: string;
+  title: string;
+  url: string | null;
+  author: string | null;
+  description: string | null;
+  item_type: "article" | "book" | "podcast" | "video" | "other";
+  added_at: string;
+}
+
 const DEFAULT_WIDGETS: Record<WidgetType, WidgetDefaults> = {
   custom_text_bio: {
     config: { title: "About" },
