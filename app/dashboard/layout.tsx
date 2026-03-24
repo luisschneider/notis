@@ -1,5 +1,6 @@
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
+import { DashboardNav } from "@/components/dashboard/nav";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -50,7 +51,10 @@ export default async function DashboardLayout({
           </div>
         </div>
       </header>
-      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6">{children}</div>
+      <div className="mx-auto flex w-full max-w-6xl">
+        <DashboardNav />
+        <main className="min-w-0 flex-1 px-4 py-6 pb-24 md:pb-6">{children}</main>
+      </div>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { WIDGET_REGISTRY_MAP } from "@/lib/widgets/registry";
 import { isWidgetType, type WidgetInstanceRecord } from "@/lib/widgets/types";
 import Link from "next/link";
+import { generatePublicProfileMetadata } from "./metadata";
 
 interface PublicProfileRecord {
   id: string;
@@ -96,4 +97,13 @@ export default async function PublicBoardPage({
       </footer>
     </main>
   );
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}) {
+  const { username } = await params;
+  return generatePublicProfileMetadata(username);
 }

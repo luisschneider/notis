@@ -38,6 +38,25 @@ export async function getProfileByUserId(userId: string): Promise<ProfileRecord>
   return data as ProfileRecord;
 }
 
+export async function getProfileByUsername(username: string): Promise<ProfileRecord | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, username, display_name, bio, avatar_url, created_at, updated_at")
+    .eq("username", username)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to fetch profile by username: ${error.message}`);
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return data as ProfileRecord;
+}
+
 export async function checkUsernameAvailability(
   username: string,
   excludeUserId?: string,
