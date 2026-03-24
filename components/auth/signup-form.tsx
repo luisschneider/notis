@@ -12,15 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const usernamePattern = /^[a-z0-9_-]{3,30}$/;
-const SIGNUP_DEBUG_ENDPOINT = "/api/debug-log";
-
-interface SignupDebugLogPayload {
-  hypothesisId: "A" | "B" | "C" | "D";
-  location: string;
-  message: string;
-  data: Record<string, unknown>;
-  timestamp: number;
-}
 
 type UsernameCheckState =
   | { status: "idle"; message: string | null }
@@ -34,21 +25,6 @@ function normalizeUsername(rawValue: string): string {
 
 function isSupabaseAuthError(error: unknown): error is { message: string } {
   return typeof error === "object" && error !== null && "message" in error;
-}
-
-async function writeSignupDebugLog(payload: SignupDebugLogPayload): Promise<void> {
-  try {
-    await fetch(SIGNUP_DEBUG_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      keepalive: true,
-      body: JSON.stringify(payload),
-    });
-  } catch {
-    // Ignore debug logging failures so user-facing auth flow is unaffected.
-  }
 }
 
 export function SignupForm(): React.JSX.Element {
@@ -143,20 +119,6 @@ export function SignupForm(): React.JSX.Element {
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setErrorMessage(null);
-    // #region agent log
-    void writeSignupDebugLog({
-      hypothesisId: "D",
-      location: "components/auth/signup-form.tsx:handleSubmit:entry",
-      message: "Signup submit started.",
-      data: {
-        emailLength: email.length,
-        passwordLength: password.length,
-        usernameLength: normalizedUsername.length,
-        usernameCheckStatus: usernameCheck.status,
-      },
-      timestamp: Date.now(),
-    });
-    // #endregion
 
     const parsed = signUpInputSchema.safeParse({
       email,
@@ -165,56 +127,19 @@ export function SignupForm(): React.JSX.Element {
     });
 
     if (!parsed.success) {
-      // #region agent log
-      void writeSignupDebugLog({
-        hypothesisId: "D",
-        location: "components/auth/signup-form.tsx:handleSubmit:validation-failed",
-        message: "Signup blocked by schema validation.",
-        data: {
-          issueCount: parsed.error.issues.length,
-          firstIssue: parsed.error.issues[0]?.message ?? null,
-        },
-        timestamp: Date.now(),
-      });
-      // #endregion
       setErrorMessage(parsed.error.issues[0]?.message ?? "Please correct the highlighted values.");
       return;
     }
 
     if (usernameCheck.status !== "available") {
-      // #region agent log
-      void writeSignupDebugLog({
-        hypothesisId: "D",
-        location: "components/auth/signup-form.tsx:handleSubmit:username-not-available",
-        message: "Signup blocked by username availability state.",
-        data: {
-          usernameCheckStatus: usernameCheck.status,
-          usernameCheckMessage: usernameCheck.message,
-        },
-        timestamp: Date.now(),
-      });
-      // #endregion
       setErrorMessage("Please choose an available username before signing up.");
       return;
     }
 
     setIsSubmitting(true);
-    // #region agent log
-    void writeSignupDebugLog({
-      hypothesisId: "A",
-      location: "components/auth/signup-form.tsx:handleSubmit:before-create-client",
-      message: "Attempting to initialize browser Supabase client.",
-      data: {
-        hasSupabaseUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
-        hasSupabaseAnonKey: Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
-        hasSupabasePublishableKey: Boolean(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY),
-      },
-      timestamp: Date.now(),
-    });
-    // #endregion
-    const supabase = createClient();
 
     try {
+      const supabase = createClient();
       const { error } = await supabase.auth.signUp({
         email: parsed.data.email,
         password: parsed.data.password,
@@ -226,54 +151,18 @@ export function SignupForm(): React.JSX.Element {
           },
         },
       });
-      // #region agent log
-      void writeSignupDebugLog({
-        hypothesisId: "B",
-        location: "components/auth/signup-form.tsx:handleSubmit:sign-up-response",
-        message: "Supabase signUp resolved.",
-        data: {
-          hasError: Boolean(error),
-          errorMessage: error?.message ?? null,
-        },
-        timestamp: Date.now(),
-      });
-      // #endregion
-
       if (error) {
         throw error;
       }
 
       window.location.assign("/dashboard/settings?welcome=1");
     } catch (error: unknown) {
-      // #region agent log
-      void writeSignupDebugLog({
-        hypothesisId: "C",
-        location: "components/auth/signup-form.tsx:handleSubmit:catch",
-        message: "Signup flow threw an error in try/catch.",
-        data: {
-          isSupabaseAuthError: isSupabaseAuthError(error),
-          errorMessage: error instanceof Error ? error.message : String(error),
-        },
-        timestamp: Date.now(),
-      });
-      // #endregion
       if (isSupabaseAuthError(error)) {
         setErrorMessage(error.message);
       } else {
         setErrorMessage("Unable to create account. Please try again.");
       }
     } finally {
-      // #region agent log
-      void writeSignupDebugLog({
-        hypothesisId: "C",
-        location: "components/auth/signup-form.tsx:handleSubmit:finally",
-        message: "Signup finally block reached.",
-        data: {
-          settingIsSubmittingTo: false,
-        },
-        timestamp: Date.now(),
-      });
-      // #endregion
       setIsSubmitting(false);
     }
   }

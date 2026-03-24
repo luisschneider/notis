@@ -1,0 +1,116 @@
+import { createClient } from "@/lib/supabase/server";
+import { USERNAME_REGEX, isUsernameValid } from "@/lib/validation/auth";
+
+export interface ProfileUpdateInput {
+  username: string;
+  displayName: string;
+  bio: string;
+  avatarUrl: string | null;
+}
+
+export interface UsernameAvailability {
+  available: boolean;
+  reason?: string;
+}
+
+export interface ProfileRecord {
+  id: string;
+  username: string;
+  display_name: string;
+  bio: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getProfileByUserId(userId: string): Promise<ProfileRecord> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, username, display_name, bio, avatar_url, created_at, updated_at")
+    .eq("id", userId)
+    .single();
+
+  if (error || !data) {
+    throw new Error("Profile not found.");
+  }
+
+  return data as ProfileRecord;
+}
+
+export async function checkUsernameAvailability(
+  username: string,
+  excludeUserId?: string,
+): Promise<UsernameAvailability> {
+  const normalizedUsername = username.toLowerCase().trim();
+
+  if (!isUsernameValid(normalizedUsername)) {
+    return {
+      available: false,
+      reason:
+        "Username must be 3-30 chars and use only lowercase letters, numbers, underscores, and dashes.",
+    };
+  }
+
+  const supabase = await createClient();
+  const query = supabase
+    .from("profiles")
+    .select("id")
+    .eq("username", normalizedUsername)
+    .limit(1);
+
+  if (excludeUserId) {
+    query.neq("id", excludeUserId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(`Could not check username: ${error.message}`);
+  }
+
+  return {
+    available: data.length === 0,
+  };
+}
+
+export async function updateCurrentUserProfile(
+  input: ProfileUpdateInput,
+): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error("Unauthorized");
+  }
+
+  const normalizedUsername = input.username.toLowerCase().trim();
+
+  if (!USERNAME_REGEX.test(normalizedUsername)) {
+    throw new Error("Invalid username format.");
+  }
+
+  const availability = await checkUsernameAvailability(normalizedUsername, user.id);
+
+  if (!availability.available) {
+    throw new Error(availability.reason ?? "Username is already taken.");
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      username: normalizedUsername,
+      display_name: input.displayName.trim(),
+      bio: input.bio.trim() || null,
+      avatar_url: input.avatarUrl,
+    })
+    .eq("id", user.id);
+
+  if (error) {
+    throw new Error(`Failed to update profile: ${error.message}`);
+  }
+}
+
