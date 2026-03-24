@@ -11,7 +11,25 @@ export interface ProfileRow {
 export interface WidgetInstanceRow {
   id: string;
   user_id: string;
-  widget_type: string;
+  widget_type:
+    | "custom_text_bio"
+    | "custom_text_links"
+    | "custom_text_quote"
+    | "location_current"
+    | "location_map"
+    | "reading_list_items"
+    | "reading_list_currently_reading"
+    | "substack_latest_posts"
+    | "substack_featured_post"
+    | "github_recent_activity"
+    | "github_pinned_repos"
+    | "github_contribution_graph"
+    | "spotify_recent_tracks"
+    | "spotify_top_artists"
+    | "spotify_top_tracks"
+    | "spotify_now_playing"
+    | "twitter_recent_tweets"
+    | "twitter_pinned_tweet";
   position: number;
   config: Record<string, unknown>;
   data: Record<string, unknown>;
