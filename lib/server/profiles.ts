@@ -23,19 +23,92 @@ export interface ProfileRecord {
   updated_at: string;
 }
 
+function sanitizeUsernameCandidate(raw: string): string {
+  return raw.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 30);
+}
+
+function getIdBasedUsername(userId: string): string {
+  const compactId = userId.replace(/-/g, "").slice(0, 12);
+  return `user_${compactId}`;
+}
+
+function toProfileRecord(row: unknown): ProfileRecord {
+  return row as ProfileRecord;
+}
+
 export async function getProfileByUserId(userId: string): Promise<ProfileRecord> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const selectQuery = supabase
     .from("profiles")
     .select("id, username, display_name, bio, avatar_url, created_at, updated_at")
-    .eq("id", userId)
-    .single();
+    .eq("id", userId);
 
-  if (error || !data) {
+  const { data: existingProfile, error: profileLookupError } = await selectQuery.maybeSingle();
+
+  if (profileLookupError) {
+    throw new Error(`Failed to fetch profile: ${profileLookupError.message}`);
+  }
+
+  if (existingProfile) {
+    return toProfileRecord(existingProfile);
+  }
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user || user.id !== userId) {
     throw new Error("Profile not found.");
   }
 
-  return data as ProfileRecord;
+  const requestedUsername =
+    typeof user.user_metadata.username === "string"
+      ? sanitizeUsernameCandidate(user.user_metadata.username)
+      : "";
+  const emailLocalPart =
+    typeof user.email === "string" ? sanitizeUsernameCandidate(user.email.split("@")[0] ?? "") : "";
+  const fallbackUsername = getIdBasedUsername(user.id);
+
+  const candidates = [requestedUsername, emailLocalPart, fallbackUsername].filter(
+    (candidate, index, array) =>
+      candidate.length >= 3 && USERNAME_REGEX.test(candidate) && array.indexOf(candidate) === index,
+  );
+
+  const displayName =
+    typeof user.user_metadata.display_name === "string"
+      ? user.user_metadata.display_name.trim()
+      : "";
+
+  for (const username of candidates) {
+    const { data: insertedProfile, error: insertError } = await supabase
+      .from("profiles")
+      .insert({
+        id: user.id,
+        username,
+        display_name: displayName,
+      })
+      .select("id, username, display_name, bio, avatar_url, created_at, updated_at")
+      .maybeSingle();
+
+    if (!insertError && insertedProfile) {
+      return toProfileRecord(insertedProfile);
+    }
+
+    if (insertError?.code !== "23505") {
+      throw new Error(`Failed to create missing profile: ${insertError?.message ?? "Unknown error"}`);
+    }
+
+    const { data: racedProfile, error: racedProfileError } = await selectQuery.maybeSingle();
+    if (racedProfileError) {
+      throw new Error(`Failed to recover missing profile: ${racedProfileError.message}`);
+    }
+    if (racedProfile) {
+      return toProfileRecord(racedProfile);
+    }
+  }
+
+  throw new Error("Profile not found.");
 }
 
 export async function getProfileByUsername(username: string): Promise<ProfileRecord | null> {
