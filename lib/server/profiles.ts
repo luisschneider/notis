@@ -23,6 +23,20 @@ export interface ProfileRecord {
   updated_at: string;
 }
 
+interface ProfileRowCompat {
+  id: string;
+  username: string;
+  display_name?: string | null;
+  displayName?: string | null;
+  bio?: string | null;
+  avatar_url?: string | null;
+  avatarUrl?: string | null;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  updatedAt?: string;
+}
+
 function sanitizeUsernameCandidate(raw: string): string {
   return raw.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 30);
 }
@@ -33,14 +47,148 @@ function getIdBasedUsername(userId: string): string {
 }
 
 function toProfileRecord(row: unknown): ProfileRecord {
-  return row as ProfileRecord;
+  const value = row as ProfileRowCompat;
+  const displayName =
+    typeof value.display_name === "string"
+      ? value.display_name
+      : typeof value.displayName === "string"
+        ? value.displayName
+        : "";
+  const bio = typeof value.bio === "string" ? value.bio : null;
+  const avatarUrl =
+    typeof value.avatar_url === "string"
+      ? value.avatar_url
+      : typeof value.avatarUrl === "string"
+        ? value.avatarUrl
+        : null;
+  const createdAt =
+    typeof value.created_at === "string"
+      ? value.created_at
+      : typeof value.createdAt === "string"
+        ? value.createdAt
+        : new Date(0).toISOString();
+  const updatedAt =
+    typeof value.updated_at === "string"
+      ? value.updated_at
+      : typeof value.updatedAt === "string"
+        ? value.updatedAt
+        : createdAt;
+
+  return {
+    id: value.id,
+    username: value.username,
+    display_name: displayName,
+    bio,
+    avatar_url: avatarUrl,
+    created_at: createdAt,
+    updated_at: updatedAt,
+  };
+}
+
+function isMissingColumnError(errorCode: string | undefined): boolean {
+  return errorCode === "42703";
+}
+
+async function insertProfileWithCompatibleDisplayNameColumn(
+  userId: string,
+  username: string,
+  displayName: string,
+): Promise<ProfileRecord | null> {
+  const supabase = await createClient();
+  const snakeCaseInsert = await supabase
+    .from("profiles")
+    .insert({
+      id: userId,
+      username,
+      display_name: displayName,
+    })
+    .select("*")
+    .maybeSingle();
+
+  if (!snakeCaseInsert.error && snakeCaseInsert.data) {
+    return toProfileRecord(snakeCaseInsert.data);
+  }
+
+  if (!isMissingColumnError(snakeCaseInsert.error?.code)) {
+    if (snakeCaseInsert.error?.code === "23505") {
+      return null;
+    }
+    throw new Error(
+      `Failed to create missing profile: ${snakeCaseInsert.error?.message ?? "Unknown error"}`,
+    );
+  }
+
+  const camelCaseInsert = await supabase
+    .from("profiles")
+    .insert({
+      id: userId,
+      username,
+      displayName,
+    })
+    .select("*")
+    .maybeSingle();
+
+  if (!camelCaseInsert.error && camelCaseInsert.data) {
+    return toProfileRecord(camelCaseInsert.data);
+  }
+
+  if (camelCaseInsert.error?.code === "23505") {
+    return null;
+  }
+
+  throw new Error(
+    `Failed to create missing profile: ${camelCaseInsert.error?.message ?? "Unknown error"}`,
+  );
+}
+
+async function updateProfileWithCompatibleDisplayNameColumn(
+  userId: string,
+  payload: {
+    username: string;
+    displayName: string;
+    bio: string | null;
+    avatarUrl: string | null;
+  },
+): Promise<void> {
+  const supabase = await createClient();
+  const snakeCaseUpdate = await supabase
+    .from("profiles")
+    .update({
+      username: payload.username,
+      display_name: payload.displayName,
+      bio: payload.bio,
+      avatar_url: payload.avatarUrl,
+    })
+    .eq("id", userId);
+
+  if (!snakeCaseUpdate.error) {
+    return;
+  }
+
+  if (!isMissingColumnError(snakeCaseUpdate.error.code)) {
+    throw new Error(`Failed to update profile: ${snakeCaseUpdate.error.message}`);
+  }
+
+  const camelCaseUpdate = await supabase
+    .from("profiles")
+    .update({
+      username: payload.username,
+      displayName: payload.displayName,
+      bio: payload.bio,
+      avatarUrl: payload.avatarUrl,
+    })
+    .eq("id", userId);
+
+  if (camelCaseUpdate.error) {
+    throw new Error(`Failed to update profile: ${camelCaseUpdate.error.message}`);
+  }
 }
 
 export async function getProfileByUserId(userId: string): Promise<ProfileRecord> {
   const supabase = await createClient();
   const selectQuery = supabase
     .from("profiles")
-    .select("id, username, display_name, bio, avatar_url, created_at, updated_at")
+    .select("*")
     .eq("id", userId);
 
   const { data: existingProfile, error: profileLookupError } = await selectQuery.maybeSingle();
@@ -81,22 +229,13 @@ export async function getProfileByUserId(userId: string): Promise<ProfileRecord>
       : "";
 
   for (const username of candidates) {
-    const { data: insertedProfile, error: insertError } = await supabase
-      .from("profiles")
-      .insert({
-        id: user.id,
-        username,
-        display_name: displayName,
-      })
-      .select("id, username, display_name, bio, avatar_url, created_at, updated_at")
-      .maybeSingle();
-
-    if (!insertError && insertedProfile) {
-      return toProfileRecord(insertedProfile);
-    }
-
-    if (insertError?.code !== "23505") {
-      throw new Error(`Failed to create missing profile: ${insertError?.message ?? "Unknown error"}`);
+    const insertedProfile = await insertProfileWithCompatibleDisplayNameColumn(
+      user.id,
+      username,
+      displayName,
+    );
+    if (insertedProfile) {
+      return insertedProfile;
     }
 
     const { data: racedProfile, error: racedProfileError } = await selectQuery.maybeSingle();
@@ -115,7 +254,7 @@ export async function getProfileByUsername(username: string): Promise<ProfileRec
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username, display_name, bio, avatar_url, created_at, updated_at")
+    .select("*")
     .eq("username", username)
     .maybeSingle();
 
@@ -127,7 +266,7 @@ export async function getProfileByUsername(username: string): Promise<ProfileRec
     return null;
   }
 
-  return data as ProfileRecord;
+  return toProfileRecord(data);
 }
 
 export async function checkUsernameAvailability(
@@ -191,18 +330,11 @@ export async function updateCurrentUserProfile(
     throw new Error(availability.reason ?? "Username is already taken.");
   }
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({
-      username: normalizedUsername,
-      display_name: input.displayName.trim(),
-      bio: input.bio.trim() || null,
-      avatar_url: input.avatarUrl,
-    })
-    .eq("id", user.id);
-
-  if (error) {
-    throw new Error(`Failed to update profile: ${error.message}`);
-  }
+  await updateProfileWithCompatibleDisplayNameColumn(user.id, {
+    username: normalizedUsername,
+    displayName: input.displayName.trim(),
+    bio: input.bio.trim() || null,
+    avatarUrl: input.avatarUrl,
+  });
 }
 
