@@ -28,6 +28,7 @@ interface ProfileRowCompat {
   username: string;
   display_name?: string | null;
   displayName?: string | null;
+  name?: string | null;
   bio?: string | null;
   avatar_url?: string | null;
   avatarUrl?: string | null;
@@ -46,6 +47,10 @@ function getIdBasedUsername(userId: string): string {
   return `user_${compactId}`;
 }
 
+function toLegacyCompatibleUsername(username: string): string {
+  return username.replace(/-/g, "_").slice(0, 20);
+}
+
 function toProfileRecord(row: unknown): ProfileRecord {
   const value = row as ProfileRowCompat;
   const displayName =
@@ -53,6 +58,8 @@ function toProfileRecord(row: unknown): ProfileRecord {
       ? value.display_name
       : typeof value.displayName === "string"
         ? value.displayName
+        : typeof value.name === "string"
+          ? value.name
         : "";
   const bio = typeof value.bio === "string" ? value.bio : null;
   const avatarUrl =
@@ -89,56 +96,130 @@ function isMissingColumnError(errorCode: string | undefined): boolean {
   return errorCode === "42703";
 }
 
+interface ProfileInsertPayload {
+  id: string;
+  username: string;
+  display_name?: string;
+  displayName?: string;
+  email?: string;
+  name?: string;
+}
+
+interface ProfileUpdatePayload {
+  username: string;
+  display_name?: string;
+  displayName?: string;
+  bio: string | null;
+  avatar_url?: string | null;
+  avatarUrl?: string | null;
+  name?: string;
+}
+
+function buildProfileInsertPayloads(
+  userId: string,
+  username: string,
+  displayName: string,
+  email: string,
+): ProfileInsertPayload[] {
+  const normalizedDisplayName = displayName || username;
+  return [
+    {
+      id: userId,
+      username,
+      display_name: normalizedDisplayName,
+      email,
+      name: normalizedDisplayName,
+    },
+    {
+      id: userId,
+      username,
+      displayName: normalizedDisplayName,
+      email,
+      name: normalizedDisplayName,
+    },
+    { id: userId, username, display_name: normalizedDisplayName, name: normalizedDisplayName },
+    { id: userId, username, displayName: normalizedDisplayName, name: normalizedDisplayName },
+    { id: userId, username, display_name: normalizedDisplayName, email },
+    { id: userId, username, displayName: normalizedDisplayName, email },
+    { id: userId, username, display_name: normalizedDisplayName },
+    { id: userId, username, displayName: normalizedDisplayName },
+  ];
+}
+
+function buildProfileUpdatePayloads(payload: {
+  username: string;
+  displayName: string;
+  bio: string | null;
+  avatarUrl: string | null;
+}): ProfileUpdatePayload[] {
+  const normalizedDisplayName = payload.displayName || payload.username;
+  return [
+    {
+      username: payload.username,
+      display_name: normalizedDisplayName,
+      bio: payload.bio,
+      avatar_url: payload.avatarUrl,
+      name: normalizedDisplayName,
+    },
+    {
+      username: payload.username,
+      displayName: normalizedDisplayName,
+      bio: payload.bio,
+      avatarUrl: payload.avatarUrl,
+      name: normalizedDisplayName,
+    },
+    {
+      username: payload.username,
+      display_name: normalizedDisplayName,
+      bio: payload.bio,
+      avatar_url: payload.avatarUrl,
+    },
+    {
+      username: payload.username,
+      displayName: normalizedDisplayName,
+      bio: payload.bio,
+      avatarUrl: payload.avatarUrl,
+    },
+  ];
+}
+
 async function insertProfileWithCompatibleDisplayNameColumn(
   userId: string,
   username: string,
   displayName: string,
+  email: string,
 ): Promise<ProfileRecord | null> {
   const supabase = await createClient();
-  const snakeCaseInsert = await supabase
-    .from("profiles")
-    .insert({
-      id: userId,
-      username,
-      display_name: displayName,
-    })
-    .select("*")
-    .maybeSingle();
+  const attempts = buildProfileInsertPayloads(userId, username, displayName, email);
 
-  if (!snakeCaseInsert.error && snakeCaseInsert.data) {
-    return toProfileRecord(snakeCaseInsert.data);
-  }
+  for (const attempt of attempts) {
+    const insertResult = await supabase
+      .from("profiles")
+      .insert(attempt)
+      .select("*")
+      .maybeSingle();
 
-  if (!isMissingColumnError(snakeCaseInsert.error?.code)) {
-    if (snakeCaseInsert.error?.code === "23505") {
+    if (!insertResult.error && insertResult.data) {
+      return toProfileRecord(insertResult.data);
+    }
+
+    if (insertResult.error?.code === "23505") {
       return null;
     }
+
+    // Try the next payload when column naming/requirements differ across environments.
+    if (
+      isMissingColumnError(insertResult.error?.code) ||
+      insertResult.error?.code === "23502"
+    ) {
+      continue;
+    }
+
     throw new Error(
-      `Failed to create missing profile: ${snakeCaseInsert.error?.message ?? "Unknown error"}`,
+      `Failed to create missing profile: ${insertResult.error?.message ?? "Unknown error"}`,
     );
   }
-
-  const camelCaseInsert = await supabase
-    .from("profiles")
-    .insert({
-      id: userId,
-      username,
-      displayName,
-    })
-    .select("*")
-    .maybeSingle();
-
-  if (!camelCaseInsert.error && camelCaseInsert.data) {
-    return toProfileRecord(camelCaseInsert.data);
-  }
-
-  if (camelCaseInsert.error?.code === "23505") {
-    return null;
-  }
-
-  throw new Error(
-    `Failed to create missing profile: ${camelCaseInsert.error?.message ?? "Unknown error"}`,
-  );
+  return null;
 }
 
 async function updateProfileWithCompatibleDisplayNameColumn(
@@ -151,37 +232,23 @@ async function updateProfileWithCompatibleDisplayNameColumn(
   },
 ): Promise<void> {
   const supabase = await createClient();
-  const snakeCaseUpdate = await supabase
-    .from("profiles")
-    .update({
-      username: payload.username,
-      display_name: payload.displayName,
-      bio: payload.bio,
-      avatar_url: payload.avatarUrl,
-    })
-    .eq("id", userId);
+  const attempts = buildProfileUpdatePayloads(payload);
 
-  if (!snakeCaseUpdate.error) {
-    return;
+  for (const attempt of attempts) {
+    const updateResult = await supabase.from("profiles").update(attempt).eq("id", userId);
+    if (!updateResult.error) {
+      return;
+    }
+    if (
+      isMissingColumnError(updateResult.error.code) ||
+      updateResult.error.code === "23502"
+    ) {
+      continue;
+    }
+    throw new Error(`Failed to update profile: ${updateResult.error.message}`);
   }
 
-  if (!isMissingColumnError(snakeCaseUpdate.error.code)) {
-    throw new Error(`Failed to update profile: ${snakeCaseUpdate.error.message}`);
-  }
-
-  const camelCaseUpdate = await supabase
-    .from("profiles")
-    .update({
-      username: payload.username,
-      displayName: payload.displayName,
-      bio: payload.bio,
-      avatarUrl: payload.avatarUrl,
-    })
-    .eq("id", userId);
-
-  if (camelCaseUpdate.error) {
-    throw new Error(`Failed to update profile: ${camelCaseUpdate.error.message}`);
-  }
+  throw new Error("Failed to update profile: no compatible profile column mapping found.");
 }
 
 export async function getProfileByUserId(userId: string): Promise<ProfileRecord> {
@@ -217,8 +284,18 @@ export async function getProfileByUserId(userId: string): Promise<ProfileRecord>
   const emailLocalPart =
     typeof user.email === "string" ? sanitizeUsernameCandidate(user.email.split("@")[0] ?? "") : "";
   const fallbackUsername = getIdBasedUsername(user.id);
+  const legacyRequestedUsername = toLegacyCompatibleUsername(requestedUsername);
+  const legacyEmailLocalPart = toLegacyCompatibleUsername(emailLocalPart);
+  const legacyFallbackUsername = toLegacyCompatibleUsername(fallbackUsername);
 
-  const candidates = [requestedUsername, emailLocalPart, fallbackUsername].filter(
+  const candidates = [
+    requestedUsername,
+    emailLocalPart,
+    fallbackUsername,
+    legacyRequestedUsername,
+    legacyEmailLocalPart,
+    legacyFallbackUsername,
+  ].filter(
     (candidate, index, array) =>
       candidate.length >= 3 && USERNAME_REGEX.test(candidate) && array.indexOf(candidate) === index,
   );
@@ -227,12 +304,17 @@ export async function getProfileByUserId(userId: string): Promise<ProfileRecord>
     typeof user.user_metadata.display_name === "string"
       ? user.user_metadata.display_name.trim()
       : "";
+  const email =
+    typeof user.email === "string" && user.email.trim().length > 0
+      ? user.email.trim()
+      : `${user.id}@notis.local`;
 
   for (const username of candidates) {
     const insertedProfile = await insertProfileWithCompatibleDisplayNameColumn(
       user.id,
       username,
       displayName,
+      email,
     );
     if (insertedProfile) {
       return insertedProfile;
