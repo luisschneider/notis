@@ -15,7 +15,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Eye, EyeOff, GripVertical, Plus, Trash2 } from "lucide-react";
+import { Eye, EyeOff, GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { WIDGET_PROVIDER_GROUPS, WIDGET_REGISTRY, type WidgetRegistryItem } from "@/lib/widgets/registry";
 import { isWidgetType, type WidgetType } from "@/lib/widgets/types";
@@ -119,6 +120,11 @@ function SortableWidgetItem({
           </p>
         </div>
         <div className="flex items-center gap-1">
+          <Button asChild size="icon-sm" variant="ghost" aria-label="Edit widget settings">
+            <Link href={`/dashboard/widgets/${widget.id}`}>
+              <Pencil className="size-4" />
+            </Link>
+          </Button>
           <Button
             size="icon-sm"
             variant="ghost"
@@ -314,9 +320,6 @@ export function WidgetManager({ initialWidgets }: WidgetManagerProps): React.JSX
                               <div className="mb-2 flex items-center gap-2">
                                 <Icon className="size-4 text-muted-foreground" />
                                 <span className="font-medium">{widget.displayName}</span>
-                                <Badge variant="outline">
-                                  {widget.gridWidth}×{widget.gridHeight}
-                                </Badge>
                               </div>
                               <p className="mb-3 text-xs text-muted-foreground">
                                 {widget.description}
