@@ -51,6 +51,15 @@ export interface ConnectedAccountRow {
   created_at: string;
 }
 
+export interface BoardViewRow {
+  id: string;
+  profile_id: string;
+  viewed_at: string;
+  username_viewed: string;
+  referrer: string | null;
+  country: string | null;
+}
+
 export interface ReadingListItemRow {
   id: string;
   user_id: string;

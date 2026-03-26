@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Link2, LayoutGrid, Settings, User } from "lucide-react";
+import { BarChart3, Home, Link2, LayoutGrid, Settings, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SignOutButton } from "./sign-out-button";
@@ -15,6 +15,7 @@ interface DashboardNavItem {
 
 const navItems: DashboardNavItem[] = [
   { href: "/dashboard", label: "Overview", icon: Home },
+  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/widgets", label: "Widgets", icon: LayoutGrid },
   { href: "/dashboard/connections", label: "Connections", icon: Link2 },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
@@ -57,7 +58,7 @@ export function DashboardNav(): React.JSX.Element {
         </div>
       </aside>
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/90 backdrop-blur-sm md:hidden">
-        <ul className="mx-auto grid max-w-md grid-cols-4">
+        <ul className="mx-auto grid max-w-md grid-cols-5">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active =
