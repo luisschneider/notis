@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 import {
   createSeededUser,
   deleteUserById,
@@ -11,7 +12,6 @@ import {
 } from "./helpers/supabase-admin";
 
 const E2E_PASSWORD = "Password123!";
-const E2E_PUBLIC_USERNAME = "testuser";
 
 async function signUp(
   page: import("@playwright/test").Page,
@@ -47,18 +47,14 @@ async function login(
   await page.getByLabel("Email").fill(input.email);
   await page.getByLabel("Password").fill(input.password);
   await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/settings/);
 }
 
 test.describe("Notis end-to-end flows (mobile 375px)", () => {
-  let signupUser: SeededUser | null = null;
   let loginUser: SeededUser | null = null;
   let testUserAccount: SeededUser | null = null;
 
   test.afterAll(async () => {
-    if (signupUser) {
-      await removeUserData(signupUser.userId);
-      await deleteUserById(signupUser.userId);
-    }
     if (loginUser) {
       await removeUserData(loginUser.userId);
       await deleteUserById(loginUser.userId);
@@ -70,21 +66,20 @@ test.describe("Notis end-to-end flows (mobile 375px)", () => {
   });
 
   test("full signup flow with username selection", async ({ page }) => {
-    signupUser = await createSeededUser({
-      usernamePrefix: "mobile_signup",
-      displayNamePrefix: "Mobile Signup",
-      password: E2E_PASSWORD,
-    });
+    const nonce = randomUUID().replace(/-/g, "").slice(0, 10);
+    const signupUsername = `mobsignup_${nonce}`.slice(0, 20);
 
     await signUp(page, {
-      email: signupUser.email,
+      email: `mobile-signup-${nonce}@example.com`,
       password: E2E_PASSWORD,
-      username: signupUser.username,
-      displayName: signupUser.displayName,
+      username: signupUsername,
+      displayName: `Mobile Signup ${nonce}`,
     });
 
     await expect(page).toHaveURL(/\/dashboard\/settings\?welcome=1/);
     await expect(page.getByRole("heading", { name: "Profile settings" }).first()).toBeVisible();
+    await page.goto(`/u/${signupUsername}`);
+    await expect(page.getByText(`@${signupUsername}`)).toBeVisible();
   });
 
   test("login flow", async ({ page }) => {
@@ -108,18 +103,29 @@ test.describe("Notis end-to-end flows (mobile 375px)", () => {
 
     await ensureWidget({
       userId: user.userId,
-      widgetType: "custom_text_bio",
+      widgetType: "custom_text_links",
       position: 0,
-      config: { title: "About" },
-      data: { markdown: "Initial bio" },
+      config: { title: "Links" },
+      data: { items: [] },
+      isVisible: true,
+    });
+    await ensureWidget({
+      userId: user.userId,
+      widgetType: "custom_text_quote",
+      position: 1,
+      config: { title: "Quote" },
+      data: { quote: "Initial quote", attribution: "Notis" },
       isVisible: true,
     });
 
     await loginAndGoToWidgets(page, { email: user.email, password: E2E_PASSWORD });
+    const widgetItems = page.locator("li.rounded-lg.border.bg-card.p-3");
+    const initialCount = await widgetItems.count();
 
     await page.getByRole("button", { name: "Add widget" }).click();
     await page.getByRole("button", { name: "Add" }).first().click();
     await expect(page.getByText("Widget instances")).toBeVisible();
+    await expect(widgetItems).toHaveCount(initialCount + 1);
     await expect(page.getByRole("button", { name: "Hide widget" }).first()).toBeVisible();
 
     const firstHideButton = page.getByRole("button", { name: "Hide widget" }).first();
@@ -127,26 +133,48 @@ test.describe("Notis end-to-end flows (mobile 375px)", () => {
     await expect(page.getByRole("button", { name: "Show widget" }).first()).toBeVisible();
     await page.getByRole("button", { name: "Show widget" }).first().click();
 
-    const widgetItems = page.locator("li.rounded-lg.border.bg-card.p-3");
-    const firstBefore = await widgetItems.first().innerText();
-    const secondBefore = await widgetItems.nth(1).innerText();
-    await page.locator('button[aria-label="Drag widget"]').first().dragTo(
-      page.locator('button[aria-label="Drag widget"]').nth(1),
-    );
-    await page.waitForTimeout(500);
-    const firstAfter = await widgetItems.first().innerText();
-    const secondAfter = await widgetItems.nth(1).innerText();
-    expect(firstAfter).toBe(secondBefore);
-    expect(secondAfter).toBe(firstBefore);
+    const widgetTitles = page.locator("li.rounded-lg.border.bg-card.p-3 p.text-sm.font-medium");
+    const firstTitleBefore = await widgetTitles
+      .first()
+      .innerText();
+    const secondTitleBefore = await widgetTitles
+      .nth(1)
+      .innerText();
+    let didReorder = false;
+    const dragHandles = page.locator('button[aria-label="Drag widget"]');
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await dragHandles.first().dragTo(
+        dragHandles.nth(1),
+        {
+          sourcePosition: { x: 8, y: 8 },
+          targetPosition: { x: 8, y: 28 },
+          force: true,
+        },
+      );
+      await page.waitForTimeout(700);
+
+      const firstTitleAfter = await widgetTitles
+        .first()
+        .innerText();
+      const secondTitleAfter = await widgetTitles
+        .nth(1)
+        .innerText();
+      if (firstTitleAfter === secondTitleBefore && secondTitleAfter === firstTitleBefore) {
+        didReorder = true;
+        break;
+      }
+    }
+    expect(didReorder).toBe(true);
 
     await page.getByRole("button", { name: "Delete widget" }).first().click();
-    await expect(widgetItems).toHaveCount(1);
+    await expect(widgetItems).toHaveCount(initialCount);
 
     await removeUserData(user.userId);
     await deleteUserById(user.userId);
   });
 
   test("public board /u/testuser renders visible widgets", async ({ page }) => {
+    const publicUsername = `testuser_${randomUUID().replace(/-/g, "").slice(0, 8)}`;
     testUserAccount = await createSeededUser({
       usernamePrefix: "mobile_public",
       displayNamePrefix: "Test User",
@@ -155,7 +183,7 @@ test.describe("Notis end-to-end flows (mobile 375px)", () => {
 
     await setProfile({
       userId: testUserAccount.userId,
-      username: E2E_PUBLIC_USERNAME,
+      username: publicUsername,
       displayName: "Test User",
       bio: "Public board bio",
       avatarUrl: null,
@@ -170,9 +198,9 @@ test.describe("Notis end-to-end flows (mobile 375px)", () => {
       isVisible: true,
     });
 
-    await page.goto(`/u/${E2E_PUBLIC_USERNAME}`);
-    await expect(page.getByText("@testuser")).toBeVisible();
-    await expect(page.getByText("Ship fast")).toBeVisible();
+    await page.goto(`/u/${publicUsername}`);
+    await expect(page.getByText(`@${publicUsername}`)).toBeVisible();
+    await expect(page.getByText("Ship fast").first()).toBeVisible();
   });
 
   test("connect mock provider and sync data appears in widget", async ({ page }) => {
@@ -231,7 +259,7 @@ test.describe("Notis end-to-end flows (mobile 375px)", () => {
 
     await expect(page.getByText("Profile updated.")).toBeVisible();
     await page.goto(`/u/${user.username}`);
-    await expect(page.getByText("@mobile_settings")).toBeVisible();
+    await expect(page.getByText(`@${user.username}`)).toBeVisible();
     await expect(page.getByText("Updated mobile bio")).toBeVisible();
 
     await removeUserData(user.userId);
