@@ -10,8 +10,20 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Notis",
-  description: "Your personal digital notice board.",
+  title: {
+    default: "Notis — Your personal notice board",
+    template: "%s — Notis",
+  },
+  description:
+    "Build a personal page that shares what you're reading, building, and listening to.",
+  openGraph: {
+    siteName: "Notis",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 const geistSans = Geist({

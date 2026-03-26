@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { toggleWidgetInstanceVisibility } from "@/lib/server/widgets";
 import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 
 interface VisibilityRequestBody {
   is_visible?: boolean;
@@ -29,6 +30,16 @@ export async function PATCH(
     }
 
     await toggleWidgetInstanceVisibility(id, user.id, body.is_visible);
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.username) {
+      revalidatePath(`/u/${profile.username}`);
+    }
+
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error: unknown) {
     return NextResponse.json(

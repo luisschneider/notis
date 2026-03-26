@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { reorderWidgetInstances } from "@/lib/server/widgets";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 interface ReorderPayload {
   items?: Array<{
@@ -37,6 +38,16 @@ export async function PATCH(request: Request): Promise<NextResponse<ApiResponse>
       .sort((first, second) => first.position - second.position)
       .map((item) => item.id);
     await reorderWidgetInstances(user.id, orderedIds);
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.username) {
+      revalidatePath(`/u/${profile.username}`);
+    }
+
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error: unknown) {
     return NextResponse.json(

@@ -17,21 +17,22 @@ export async function generatePublicProfileMetadata(
   const path = `/u/${profile.username}`;
 
   return {
-    title: `${displayName} · Notis`,
+    title: `${displayName}`,
     description,
     alternates: {
       canonical: path,
     },
     openGraph: {
-      title: `${displayName} · Notis`,
+      title: `${displayName} — Notis`,
       description,
       url: path,
       type: "profile",
+      siteName: "Notis",
       images: profile.avatar_url ? [{ url: profile.avatar_url }] : undefined,
     },
     twitter: {
-      card: "summary",
-      title: `${displayName} · Notis`,
+      card: "summary_large_image",
+      title: `${displayName} — Notis`,
       description,
       images: profile.avatar_url ? [profile.avatar_url] : undefined,
     },

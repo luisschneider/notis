@@ -3,11 +3,26 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
+import { JsonLd } from "@/components/seo/json-ld";
+
+const siteDescription =
+  "Build a personal page that shares what you're reading, building, and listening to.";
 
 export const metadata: Metadata = {
-  title: "Notis — Personal digital notice board",
-  description:
-    "Build a personal page that shares what you're reading, building, and listening to.",
+  title: "Notis — Your personal notice board",
+  description: siteDescription,
+  openGraph: {
+    title: "Notis — Your personal notice board",
+    description: siteDescription,
+    url: "/",
+    type: "website",
+    siteName: "Notis",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Notis — Your personal notice board",
+    description: siteDescription,
+  },
 };
 
 export default async function Home(): Promise<React.JSX.Element> {
@@ -16,8 +31,26 @@ export default async function Home(): Promise<React.JSX.Element> {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const webAppJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "Notis",
+    url: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000",
+    description: siteDescription,
+    applicationCategory: "SocialNetworkingApplication",
+    operatingSystem: "Any",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+  };
+
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <JsonLd data={webAppJsonLd} />
       <header className="border-b">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Link href="/" className="text-sm font-semibold tracking-tight">

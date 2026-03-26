@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { syncTwitterWidgetsForUser } from "@/lib/providers/twitter";
+import { revalidatePath } from "next/cache";
 
 interface SyncResponse {
   synced?: number;
@@ -23,6 +24,16 @@ export async function POST(request: Request): Promise<NextResponse<SyncResponse>
     const targetWidgetId =
       typeof raw.widgetId === "string" && raw.widgetId.length > 0 ? raw.widgetId : undefined;
     const synced = await syncTwitterWidgetsForUser(user.id, targetWidgetId);
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.username) {
+      revalidatePath(`/u/${profile.username}`);
+    }
+
     return NextResponse.json({ synced }, { status: 200 });
   } catch (error: unknown) {
     return NextResponse.json(
