@@ -110,7 +110,7 @@ function SortableWidgetItem({
             <p className="truncate text-sm font-medium">
               {meta?.displayName ?? widget.widget_type}
             </p>
-            <Badge variant={widget.is_visible ? "secondary" : "outline"}>
+            <Badge variant={widget.is_visible ? "secondary" : "outline-solid"}>
               {widget.is_visible ? "Visible" : "Hidden"}
             </Badge>
           </div>
