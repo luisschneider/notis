@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 const NOW_ISO = "2026-03-26T11:30:00.000Z";
 const DEMO_USER_ID = "demo-user-id";
 
-const DEMO_WIDGETS: WidgetInstanceRecord[] = [
+const DEMO_WIDGETS_UNSORTED = [
   {
     id: "widget-custom-text-bio",
     user_id: DEMO_USER_ID,
@@ -445,7 +445,11 @@ const DEMO_WIDGETS: WidgetInstanceRecord[] = [
     created_at: NOW_ISO,
     updated_at: NOW_ISO,
   },
-].sort((left, right) => left.position - right.position);
+] satisfies WidgetInstanceRecord[];
+
+const DEMO_WIDGETS: WidgetInstanceRecord[] = [...DEMO_WIDGETS_UNSORTED].sort(
+  (left, right) => left.position - right.position,
+);
 
 function getGridSpanClassName(widgetType: WidgetType): string {
   const widgetMeta = WIDGET_REGISTRY_MAP[widgetType];
