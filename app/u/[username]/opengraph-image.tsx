@@ -101,7 +101,9 @@ function buildFallbackImage(username: string): ImageResponse {
       >
         <div style={{ fontSize: 36, fontWeight: 700 }}>Notis</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ fontSize: 58, fontWeight: 700, letterSpacing: -1.5 }}>@{username}</div>
+          <div style={{ fontSize: 58, fontWeight: 700, letterSpacing: -1.5 }}>
+            {`@${username}`}
+          </div>
           <div style={{ fontSize: 28, opacity: 0.9 }}>Personal digital notice board</div>
         </div>
       </div>
@@ -168,7 +170,7 @@ export default async function OpenGraphImage({
                   border: "1px solid rgba(148, 163, 184, 0.5)",
                 }}
               >
-                @{profile.username}
+                {`@${profile.username}`}
               </div>
             </div>
             <div style={{ fontSize: 30, lineHeight: 1.35, color: "rgb(226, 232, 240)" }}>{bio}</div>
@@ -190,7 +192,6 @@ export default async function OpenGraphImage({
             }}
           >
             {profile.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={profile.avatar_url}
                 alt={`${displayName} avatar`}
@@ -254,7 +255,7 @@ export default async function OpenGraphImage({
                   color: "rgb(226, 232, 240)",
                 }}
               >
-                +{remainingWidgets} more
+                {`+${remainingWidgets} more`}
               </div>
             ) : null}
           </div>
