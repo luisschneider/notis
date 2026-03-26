@@ -132,7 +132,7 @@ export function ConnectionCard({ accounts }: ConnectionCardProps): React.JSX.Ele
 
             <Button
               type="button"
-              variant={connected ? "outline" : "default"}
+              variant={connected ? "outline-solid" : "default"}
               disabled={isPending}
               onClick={() => {
                 if (connected) {

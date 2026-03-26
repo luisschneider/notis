@@ -175,7 +175,7 @@ export function SignupForm(): React.JSX.Element {
         : "text-destructive";
 
   return (
-    <Card className="border-border/70 shadow-sm">
+    <Card className="border-border/70 shadow-xs">
       <CardHeader className="space-y-2">
         <CardTitle className="text-2xl">Create your Notis board</CardTitle>
         <CardDescription>

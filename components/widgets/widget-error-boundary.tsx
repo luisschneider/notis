@@ -32,7 +32,7 @@ export class WidgetErrorBoundary extends Component<
   public render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <article className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+        <article className="rounded-2xl border border-border/80 bg-card p-4 shadow-xs">
           <h3 className="text-sm font-semibold tracking-tight">{this.props.title}</h3>
           <p className="mt-2 text-sm text-muted-foreground">
             This widget failed to render. Please re-open settings or try syncing again.

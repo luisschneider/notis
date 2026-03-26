@@ -63,7 +63,7 @@ export default async function Home(): Promise<React.JSX.Element> {
           </div>
         </div>
 
-        <div className="w-full max-w-md space-y-3 rounded-2xl border bg-card p-4 shadow-sm">
+        <div className="w-full max-w-md space-y-3 rounded-2xl border bg-card p-4 shadow-xs">
           <h2 className="text-sm font-semibold">What comes with a Notis board</h2>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>• Mobile-first public profile at `/u/username`</li>
