@@ -4,7 +4,7 @@ import { DashboardNav } from "@/components/dashboard/nav";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { ReactNode, JSX } from "react";
+import type { ReactNode } from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
