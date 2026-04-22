@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { syncSpotifyWidgetById, syncSpotifyWidgetsForUser } from "@/lib/providers/spotify";
+import { revalidatePath } from "next/cache";
 
 interface SpotifySyncRequestBody {
   widgetId?: string;
@@ -28,6 +29,15 @@ export async function POST(request: Request): Promise<NextResponse<SpotifySyncRe
     const synced = body.widgetId
       ? await syncSpotifyWidgetById(user.id, body.widgetId)
       : await syncSpotifyWidgetsForUser(user.id);
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.username) {
+      revalidatePath(`/u/${profile.username}`);
+    }
+
     return NextResponse.json({ synced, updated: synced }, { status: 200 });
   } catch (error: unknown) {
     return NextResponse.json(

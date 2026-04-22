@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { JsonLd } from "@/components/seo/json-ld";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,10 +11,24 @@ import { cn } from "@/lib/utils";
 import { WIDGET_REGISTRY_MAP } from "@/lib/widgets/registry";
 import type { WidgetInstanceRecord, WidgetType } from "@/lib/widgets/types";
 
+const siteDescription =
+  "Create one beautiful page that shows what you are reading, building, listening to, and thinking about.";
+
 export const metadata: Metadata = {
   title: "Notis — Your personal board on the web",
-  description:
-    "Create one beautiful page that shows what you are reading, building, listening to, and thinking about.",
+  description: siteDescription,
+  openGraph: {
+    title: "Notis — Your personal board on the web",
+    description: siteDescription,
+    url: "/",
+    type: "website",
+    siteName: "Notis",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Notis — Your personal board on the web",
+    description: siteDescription,
+  },
 };
 
 const NOW_ISO = "2026-03-26T11:30:00.000Z";
@@ -500,8 +515,26 @@ export default async function Home(): Promise<React.JSX.Element> {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const webAppJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "Notis",
+    url: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000",
+    description: siteDescription,
+    applicationCategory: "SocialNetworkingApplication",
+    operatingSystem: "Any",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+  };
+
   return (
     <main className="relative min-h-screen bg-background text-foreground">
+      <JsonLd data={webAppJsonLd} />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] bg-[radial-gradient(circle_at_top,theme(colors.violet.200/.45),transparent_58%)] dark:bg-[radial-gradient(circle_at_top,theme(colors.violet.900/.35),transparent_58%)]"

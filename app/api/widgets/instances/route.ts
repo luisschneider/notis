@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createWidgetInstance } from "@/lib/server/widgets";
 import { isWidgetType, type WidgetType } from "@/lib/widgets/types";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 interface CreateWidgetRequest {
   widget_type?: string;
@@ -79,6 +80,16 @@ export async function POST(request: Request): Promise<NextResponse<CreateApiResp
       userId: user.id,
       widgetType,
     });
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.username) {
+      revalidatePath(`/u/${profile.username}`);
+    }
+
     return NextResponse.json({ widget: widget as WidgetInstanceApiRecord }, { status: 201 });
   } catch (error: unknown) {
     return NextResponse.json(

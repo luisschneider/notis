@@ -5,6 +5,7 @@ import {
 } from "@/lib/server/widgets";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 const widgetPatchSchema = z
@@ -40,6 +41,16 @@ export async function DELETE(
   }
 
   await deleteWidgetInstance(id, user.id);
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profile?.username) {
+    revalidatePath(`/u/${profile.username}`);
+  }
+
   return NextResponse.json({}, { status: 204 });
 }
 
@@ -119,6 +130,16 @@ export async function PATCH(
       config: payload.config,
       data: payload.data,
     });
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.username) {
+      revalidatePath(`/u/${profile.username}`);
+    }
+
     return NextResponse.json({ widget }, { status: 200 });
   } catch (error: unknown) {
     return NextResponse.json(

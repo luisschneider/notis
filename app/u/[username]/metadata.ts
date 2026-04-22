@@ -39,16 +39,17 @@ export async function generatePublicProfileMetadata(
   const canonicalPath = `/u/${profile.username}`;
 
   return {
-    title: `${displayName} · Notis`,
+    title: `${displayName}`,
     description,
     alternates: {
       canonical: canonicalPath,
     },
     openGraph: {
-      title: `${displayName} · Notis`,
+      title: `${displayName} — Notis`,
       description,
       url: canonicalPath,
       type: "profile",
+      siteName: "Notis",
       images: [{ url: imagePath, width: 1200, height: 630, alt: `${displayName} public board` }],
     },
     twitter: {

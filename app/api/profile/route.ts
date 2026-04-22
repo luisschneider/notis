@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAvatarStoragePath, getPublicAvatarUrl } from "@/lib/server/storage";
 import { profileUpdateSchema } from "@/lib/validation/auth";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 interface ProfilePayload {
   id: string;
@@ -151,6 +152,13 @@ export async function PATCH(request: Request): Promise<NextResponse<ProfileRespo
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 400 });
+  }
+
+  if (existingProfile.username) {
+    revalidatePath(`/u/${existingProfile.username}`);
+  }
+  if (payload.username !== existingProfile.username) {
+    revalidatePath(`/u/${payload.username}`);
   }
 
   return NextResponse.json({ profile }, { status: 200 });

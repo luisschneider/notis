@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { syncGitHubWidgetsForUser } from "@/lib/providers/github";
+import { revalidatePath } from "next/cache";
 
 interface SyncResponse {
   updated?: number;
@@ -20,6 +21,16 @@ export async function POST(): Promise<NextResponse<SyncResponse>> {
 
   try {
     const updated = await syncGitHubWidgetsForUser(user.id);
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.username) {
+      revalidatePath(`/u/${profile.username}`);
+    }
+
     return NextResponse.json({ updated }, { status: 200 });
   } catch (error: unknown) {
     return NextResponse.json(

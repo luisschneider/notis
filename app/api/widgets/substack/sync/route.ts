@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { syncSubstackWidgetsForUser } from "@/lib/providers/substack";
+import { revalidatePath } from "next/cache";
 
 interface SyncResponse {
   updated?: number;
@@ -36,6 +37,16 @@ export async function POST(request: Request): Promise<NextResponse<SyncResponse>
     const widgetId =
       typeof raw.widgetId === "string" && raw.widgetId.length > 0 ? raw.widgetId : undefined;
     const synced = await syncSubstackWidgetsForUser(user.id, widgetId);
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.username) {
+      revalidatePath(`/u/${profile.username}`);
+    }
+
     return NextResponse.json(
       {
         updated: synced.updated,
