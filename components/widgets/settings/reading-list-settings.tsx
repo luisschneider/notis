@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,13 +67,13 @@ export function ReadingListSettings({
     [maxItems],
   );
 
-  useMemo(() => {
+  useEffect(() => {
     let isMounted = true;
     async function loadItems(): Promise<void> {
       setIsLoadingItems(true);
       try {
         const response = await fetch(
-          `/api/reading-list-items?widgetInstanceId=${encodeURIComponent(widget.id)}`,
+          `/api/reading-list-items?widget_instance_id=${encodeURIComponent(widget.id)}`,
           { cache: "no-store" },
         );
         const json = (await response.json()) as ReadingListResponse;
@@ -191,7 +191,7 @@ export function ReadingListSettings({
           widgetId={widget.id}
           onSaved={async () => {
             const response = await fetch(
-              `/api/reading-list-items?widgetInstanceId=${encodeURIComponent(widget.id)}`,
+              `/api/reading-list-items?widget_instance_id=${encodeURIComponent(widget.id)}`,
               { cache: "no-store" },
             );
             const json = (await response.json()) as ReadingListResponse;

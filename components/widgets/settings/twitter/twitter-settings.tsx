@@ -60,11 +60,11 @@ export function TwitterSettings({
           config: {
             ...widget.config,
             handle: handle.trim(),
+            pinnedTweetUrl,
           },
           data: {
             ...widget.data,
             tweetUrls: normalizedUrls,
-            pinnedUrl: pinnedTweetUrl,
           },
         }),
       });

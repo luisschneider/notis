@@ -8,6 +8,7 @@ interface SpotifySyncRequestBody {
 }
 
 interface SpotifySyncResponse {
+  updated?: number;
   synced?: number;
   error?: string;
 }
@@ -28,7 +29,6 @@ export async function POST(request: Request): Promise<NextResponse<SpotifySyncRe
     const synced = body.widgetId
       ? await syncSpotifyWidgetById(user.id, body.widgetId)
       : await syncSpotifyWidgetsForUser(user.id);
-
     const { data: profile } = await supabase
       .from("profiles")
       .select("username")
@@ -38,7 +38,7 @@ export async function POST(request: Request): Promise<NextResponse<SpotifySyncRe
       revalidatePath(`/u/${profile.username}`);
     }
 
-    return NextResponse.json({ synced }, { status: 200 });
+    return NextResponse.json({ synced, updated: synced }, { status: 200 });
   } catch (error: unknown) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Spotify sync failed." },

@@ -19,6 +19,7 @@ interface WidgetApiResponse {
 
 interface SyncApiResponse {
   updated?: number;
+  synced?: number;
   error?: string;
 }
 
@@ -97,7 +98,7 @@ export function GithubSettings({
       if (!response.ok) {
         throw new Error(json.error ?? "Unable to sync GitHub data.");
       }
-      setSuccessMessage(`GitHub sync complete (${json.updated ?? 0} widget updated).`);
+      setSuccessMessage(`GitHub sync complete (${json.updated ?? json.synced ?? 0} widget updated).`);
     } catch (error: unknown) {
       setErrorMessage(error instanceof Error ? error.message : "Unable to sync GitHub data.");
     } finally {

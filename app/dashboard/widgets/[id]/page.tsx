@@ -26,7 +26,7 @@ export default async function WidgetSettingsPage({
     redirect("/login");
   }
 
-  const widget = await getWidgetInstanceById(id, user.id);
+  const widget = await getWidgetInstanceById(user.id, id);
   if (!widget) {
     notFound();
   }

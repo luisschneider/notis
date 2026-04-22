@@ -45,10 +45,10 @@ export function WidgetRenderer({ widget }: RenderWidgetProps): React.JSX.Element
         return <ReadingListWidget widget={widget} />;
       case "github_recent_activity":
         return <GitHubRecentActivityWidget widget={widget} />;
-    case "github_pinned_repos":
-      return <GithubPinnedReposWidget widget={widget} />;
-    case "github_contribution_graph":
-      return <GithubContributionGraphWidget widget={widget} />;
+      case "github_pinned_repos":
+        return <GithubPinnedReposWidget widget={widget} />;
+      case "github_contribution_graph":
+        return <GithubContributionGraphWidget widget={widget} />;
       case "substack_latest_posts":
         return <SubstackLatestPostsWidget widget={widget} />;
       case "substack_featured_post":
