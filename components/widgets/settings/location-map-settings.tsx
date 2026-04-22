@@ -50,10 +50,12 @@ export function LocationMapSettings({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           config: {
+            ...widget.config,
             title: title.trim() || "Map",
             zoom,
           },
           data: {
+            ...widget.data,
             location: location.trim(),
             latitude: latitude.trim() ? Number(latitude) : null,
             longitude: longitude.trim() ? Number(longitude) : null,

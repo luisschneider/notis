@@ -20,6 +20,7 @@ interface WidgetApiResponse {
 interface SyncApiResponse {
   updated?: number;
   widget?: WidgetInstanceRecord;
+  synced?: number;
   error?: string;
 }
 
@@ -90,7 +91,7 @@ export function SubstackSettings({
       if (json.widget) {
         onSaved(json.widget);
       }
-      setMessage(`Substack sync complete (${json.updated ?? 0} widget updated).`);
+      setMessage(`Substack sync complete (${json.updated ?? json.synced ?? 0} widget updated).`);
     } catch (error: unknown) {
       setErrorMessage(
         error instanceof Error ? error.message : "Unable to sync Substack data.",

@@ -103,7 +103,7 @@ export function ReadingListItemForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          widget_id: widgetId,
+          widget_instance_id: widgetId,
           ...payload,
         }),
       });

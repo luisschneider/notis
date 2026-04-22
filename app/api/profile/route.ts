@@ -15,7 +15,7 @@ interface ProfilePayload {
 
 interface ProfileResponseBody {
   profile?: ProfilePayload;
-  avatarUrl?: string;
+  avatar_url?: string;
   error?: string;
 }
 
@@ -204,5 +204,5 @@ export async function POST(request: Request): Promise<NextResponse<ProfileRespon
     );
   }
 
-  return NextResponse.json({ avatarUrl }, { status: 200 });
+  return NextResponse.json({ avatar_url: avatarUrl }, { status: 200 });
 }

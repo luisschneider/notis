@@ -19,7 +19,7 @@ interface ApiResponse {
 }
 
 interface SyncApiResponse {
-  updated?: number;
+  synced?: number;
   error?: string;
 }
 
@@ -100,7 +100,7 @@ export function SpotifySettings({
       if (!response.ok) {
         throw new Error(json.error ?? "Unable to sync Spotify data.");
       }
-      setSuccessMessage(`Spotify sync complete (${json.updated ?? 0} widget updated).`);
+      setSuccessMessage(`Spotify sync complete (${json.synced ?? 0} widget updated).`);
     } catch (error: unknown) {
       setErrorMessage(error instanceof Error ? error.message : "Unable to sync Spotify data.");
     } finally {

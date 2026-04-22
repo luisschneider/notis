@@ -364,7 +364,7 @@ export function WidgetManager({ initialWidgets }: WidgetManagerProps): React.JSX
                 items={sortedWidgets.map((widget) => widget.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <ul className="space-y-2">
+                <ul className="space-y-2" data-testid="widget-list">
                   {sortedWidgets.map((widget) => (
                     <SortableWidgetItem
                       key={widget.id}
