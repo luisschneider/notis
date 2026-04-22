@@ -4,6 +4,7 @@ import { WidgetRenderer } from "@/components/widgets/render-widget";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { WIDGET_REGISTRY_MAP } from "@/lib/widgets/registry";
 import { isWidgetType, type WidgetInstanceRecord } from "@/lib/widgets/types";
+import { TrackView } from "@/components/analytics/track-view";
 import Link from "next/link";
 import { generatePublicProfileMetadata } from "./metadata";
 
@@ -95,6 +96,8 @@ export default async function PublicBoardPage({
           Made with Notis
         </Link>
       </footer>
+
+      <TrackView username={typedProfile.username} />
     </main>
   );
 }
